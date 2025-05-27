@@ -1,5 +1,6 @@
 package com.Prisonman.Prisonman.Model;
 
+import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -7,7 +8,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class StaffStatus {
     @Id
     private String id;
+    @Setter
     private String name;
+    @Setter
     private int value;
 
     public StaffStatus() {}  // Empty constructor needed by Spring Data
@@ -20,7 +23,6 @@ public class StaffStatus {
     // Getters and setters
     public String getId() { return id; }
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+
     public int getValue() { return value; }
-    public void setValue(int value) { this.value = value; }
 }

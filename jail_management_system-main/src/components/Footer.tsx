@@ -11,7 +11,7 @@ const Footer = ({ onLogout }: FooterProps) => {
     <footer className="bg-slate-800 text-white py-6 px-6">
       <div className="container mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="flex flex-col md:flex-row items-center gap-4 mb-4 md:mb-0">
+          <div className="flex flex-col md:flex-row items-center gap-4 mb-4 md:mb-0 pl-[200px]">
             <div className="flex items-center">
               <Shield className="h-6 w-6 mr-2 text-blue-400" />
               <div>

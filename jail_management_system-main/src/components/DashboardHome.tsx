@@ -1,14 +1,34 @@
-
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import DashboardCharts from './DashboardCharts';
 
 const DashboardHome = () => {
-  const stats = [
-    { title: 'Total Inmates', value: '1,247', change: '+12', icon: '👤' },
-    { title: 'Active Staff', value: '89', change: '+3', icon: '👥' },
-    { title: 'Daily Visitors', value: '156', change: '-8', icon: '🚶' },
-    { title: 'Available Cells', value: '23', change: '+5', icon: '🏢' },
-  ];
+  const [stats, setStats] = useState([
+    { title: 'Total Inmates', value: '...', change: '...', icon: '👤' },
+    { title: 'Active Staff', value: '...', change: '...', icon: '👥' },
+    { title: 'Daily Visitors', value: '...', change: '...', icon: '🚶' },
+    { title: 'Available Cells', value: '...', change: '...', icon: '🏢' },
+  ]);
+
+  // Example: fetch stats from backend on mount
+  useEffect(() => {
+    fetch('http://localhost:8080/api/dashboard-summary')  
+      .then(res => res.json())
+      .then(data => {
+        // Assuming your backend sends an object like:
+        // { totalInmates: 1247, activeStaff: 89, dailyVisitors: 156, availableCells: 23 }
+        setStats([
+          { title: 'Total Inmates', value: data.totalInmates.toString(), change: '+12', icon: '👤' },
+          { title: 'Active Staff', value: data.activeStaff.toString(), change: '+3', icon: '👥' },
+          { title: 'Daily Visitors', value: data.dailyVisitors.toString(), change: '-8', icon: '🚶' },
+          { title: 'Available Cells', value: data.availableCells.toString(), change: '+5', icon: '🏢' },
+        ]);
+      })
+      .catch(err => {
+        console.error('Error fetching dashboard stats:', err);
+        // fallback or error state handling here
+      });
+  }, []);
 
   const recentActivities = [
     { type: 'Inmate Check-in', details: 'John Doe admitted to Cell Block A', time: '2 hours ago' },
