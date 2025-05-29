@@ -39,26 +39,35 @@ interface Inmate {
   block: string;
 }
 
+interface Cell {
+  cellNumber: string;
+  block: string;
+  capacity: number;
+  currentOccupancy: number;
+  status: string;
+}
+
 const InmatesPanel = () => {
   const [inmates, setInmates] = useState<Inmate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Released' | 'Transferred'>('All');
+  const [blockFilter, setBlockFilter] = useState<'All' | string>('All');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [cells, setCells] = useState<Cell[]>([]);
+  const [cellOptions, setCellOptions] = useState<string[]>([]);
   const [newInmate, setNewInmate] = useState({
     name: '',
     age: '',
     cellNumber: '',
     charges: '',
     status: 'Active' as 'Active' | 'Released' | 'Transferred',
+    block: '',
   });
 
   useEffect(() => {
     fetch('http://localhost:8080/api/inmates')
       .then((res) => res.json())
-      .then((data) => {
-        console.log('Fetched Inmates Data:', data);
-        setInmates(data);
-      })
+      .then((data) => setInmates(data))
       .catch((err) => {
         console.error('Error fetching inmates:', err);
         toast({
@@ -67,20 +76,49 @@ const InmatesPanel = () => {
           variant: 'destructive',
         });
       });
+
+    fetch('http://localhost:8080/api/cells')
+      .then((res) => res.json())
+      .then((data) => {
+        const availableCells = data.filter(
+          (cell: Cell) => cell.status === 'Available' && cell.currentOccupancy < cell.capacity
+        );
+        setCells(availableCells);
+      })
+      .catch((err) => {
+        console.error('Error fetching cells:', err);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch cell data.',
+          variant: 'destructive',
+        });
+      });
   }, []);
+
+  useEffect(() => {
+    if (newInmate.block) {
+      const filtered = cells
+        .filter(cell => cell.block === newInmate.block)
+        .map(cell => cell.cellNumber);
+      setCellOptions(filtered);
+    } else {
+      setCellOptions([]);
+    }
+  }, [newInmate.block, cells]);
+
+  const uniqueBlocks = Array.from(new Set(cells.map((cell) => cell.block)));
 
   const filteredInmates = inmates.filter((inmate) => {
     const matchesSearch =
       inmate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inmate.inmateId.toLowerCase().includes(searchTerm.toLowerCase());
-
     const matchesStatus = statusFilter === 'All' || inmate.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+    const matchesBlock = blockFilter === 'All' || inmate.block === blockFilter;
+    return matchesSearch && matchesStatus && matchesBlock;
   });
 
   const handleAddInmate = () => {
-    if (!newInmate.name || !newInmate.age || !newInmate.cellNumber || !newInmate.charges) {
+    if (!newInmate.name || !newInmate.age || !newInmate.cellNumber || !newInmate.charges || !newInmate.block) {
       toast({
         title: 'Error',
         description: 'Please fill in all required fields',
@@ -98,12 +136,11 @@ const InmatesPanel = () => {
       charges: newInmate.charges,
       status: newInmate.status,
       admissionDate: new Date().toISOString().split('T')[0],
-      block: '',
+      block: newInmate.block,
     };
 
-    // For now, we're only updating state (not POSTing to backend)
     setInmates([...inmates, inmate]);
-    setNewInmate({ name: '', age: '', cellNumber: '', charges: '', status: 'Active' });
+    setNewInmate({ name: '', age: '', cellNumber: '', charges: '', status: 'Active', block: '' });
     setIsAddDialogOpen(false);
 
     toast({
@@ -160,13 +197,41 @@ const InmatesPanel = () => {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="block">Block</Label>
+                <Select
+                  value={newInmate.block}
+                  onValueChange={(value) => setNewInmate({ ...newInmate, block: value, cellNumber: '' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select block" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {uniqueBlocks.map((block) => (
+                      <SelectItem key={block} value={block}>
+                        {block}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="cellNumber">Cell Number</Label>
-                <Input
-                  id="cellNumber"
+                <Select
                   value={newInmate.cellNumber}
-                  onChange={(e) => setNewInmate({ ...newInmate, cellNumber: e.target.value })}
-                  placeholder="e.g., A-101"
-                />
+                  onValueChange={(value) => setNewInmate({ ...newInmate, cellNumber: value })}
+                  disabled={!newInmate.block}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select cell number" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cellOptions.map((cellNum) => (
+                      <SelectItem key={cellNum} value={cellNum}>
+                        {cellNum}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="charges">Charges</Label>
@@ -205,7 +270,7 @@ const InmatesPanel = () => {
         </Dialog>
       </div>
 
-      {/* Search and Status Filter */}
+      {/* Search and Filters */}
       <div className="flex justify-between items-center space-x-4">
         <Input
           placeholder="Search inmates..."
@@ -231,7 +296,24 @@ const InmatesPanel = () => {
           </SelectContent>
         </Select>
 
-        <span className="text-slate-600">Total: {inmates.length} inmates</span>
+        <Select
+          value={blockFilter}
+          onValueChange={(value: string) => setBlockFilter(value)}
+        >
+          <SelectTrigger className="max-w-xs">
+            <SelectValue placeholder="Filter by block" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All</SelectItem>
+            {Array.from(new Set(inmates.map((i) => i.block))).filter(b => b).map((block) => (
+              <SelectItem key={block} value={block}>
+                {block}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <span className="text-slate-600">Total: {filteredInmates.length} inmates</span>
       </div>
 
       <div className="grid gap-4">
@@ -242,7 +324,7 @@ const InmatesPanel = () => {
                 <div>
                   <CardTitle className="text-lg">{inmate.name}</CardTitle>
                   <CardDescription>
-                    ID: {inmate.inmateId} • Cell: {inmate.cellNumber}
+                    ID: {inmate.inmateId} • Cell: {inmate.cellNumber} • Block: {inmate.block}
                   </CardDescription>
                 </div>
                 <div className="flex space-x-2">

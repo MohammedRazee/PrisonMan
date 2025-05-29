@@ -88,84 +88,116 @@ const VisitorsPanel = () => {
     (statusFilter === 'All' || visitor.status === statusFilter)
   );
 
-  const handleAddVisitor = () => {
-    if (
-      !newVisitor.name ||
-      !newVisitor.relationship ||
-      !newVisitor.inmateVisiting ||
-      !newVisitor.visitDate ||
-      !newVisitor.visitTime ||
-      !newVisitor.phone ||
-      !newVisitor.idNumber
-    ) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
-      });
-      return;
-    }
+const handleAddVisitor = async () => {
+  if (
+    !newVisitor.name ||
+    !newVisitor.relationship ||
+    !newVisitor.inmateVisiting ||
+    !newVisitor.visitDate ||
+    !newVisitor.visitTime ||
+    !newVisitor.phone ||
+    !newVisitor.idNumber
+  ) {
+    toast({
+      title: 'Error',
+      description: 'Please fill in all required fields',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-    const visitorPayload = {
-      name: newVisitor.name,
-      relationship: newVisitor.relationship,
-      visitingInmate: newVisitor.inmateVisiting,
-      visitDate: newVisitor.visitDate,
-      visitTime: newVisitor.visitTime,
-      phone: newVisitor.phone,
-      idNumber: newVisitor.idNumber,
-      status: newVisitor.status,
-    };
+  const inmateExists = await checkInmateExists(newVisitor.inmateVisiting);
+  if (!inmateExists) {
+    toast({
+      title: 'Error',
+      description: 'The specified inmate does not exist.',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-    fetch("http://localhost:8080/api/visitors", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(visitorPayload),
-    })
-      .then((res) => res.json())
-      .then((created) => {
-        setVisitors([
-          ...visitors,
-          {
-            id: created._id,
-            name: created.name,
-            relationship: created.relationship,
-            inmateVisiting: created.visitingInmate,
-            visitDate: created.visitDate,
-            visitTime: created.visitTime,
-            status: created.status,
-            phone: created.phone,
-            idNumber: created.idNumber,
-          },
-        ]);
-        setNewVisitor({
-          name: '',
-          relationship: '',
-          inmateVisiting: '',
-          visitDate: '',
-          visitTime: '',
-          phone: '',
-          idNumber: '',
-          status: 'Scheduled',
-        });
-        setIsAddDialogOpen(false);
-        toast({
-          title: 'Success',
-          description: 'Visitor scheduled successfully',
-        });
-      });
+  const visitorPayload = {
+    name: newVisitor.name,
+    relationship: newVisitor.relationship,
+    visitingInmate: newVisitor.inmateVisiting,
+    visitDate: newVisitor.visitDate,
+    visitTime: newVisitor.visitTime,
+    phone: newVisitor.phone,
+    idNumber: newVisitor.idNumber,
+    status: newVisitor.status,
   };
 
-  const handleDeleteVisitor = (id: string) => {
-    fetch(`http://localhost:8080/api/visitors/${id}`, {
-      method: 'DELETE',
-    }).then(() => {
-      setVisitors(visitors.filter((v) => v.id !== id));
-      toast({
-        title: 'Success',
-        description: 'Visitor record removed successfully',
-      });
+fetch("http://localhost:8080/api/visitors", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(visitorPayload),
+})
+  .then(async (res) => {
+    if (!res.ok) {
+      const errorMessage = await res.text()
+      throw new Error(errorMessage || 'Failed to create visitor');
+    }
+    return res.json();
+  })
+  .then((created) => {
+    setVisitors([
+      ...visitors,
+      {
+        id: created._id,
+        name: created.name,
+        relationship: created.relationship,
+        inmateVisiting: created.visitingInmate,
+        visitDate: created.visitDate,
+        visitTime: created.visitTime,
+        status: created.status,
+        phone: created.phone,
+        idNumber: created.idNumber,
+      },
+    ]);
+    setNewVisitor({
+      name: '',
+      relationship: '',
+      inmateVisiting: '',
+      visitDate: '',
+      visitTime: '',
+      phone: '',
+      idNumber: '',
+      status: 'Scheduled',
     });
+    setIsAddDialogOpen(false);
+    toast({
+      title: 'Success',
+      description: 'Visitor scheduled successfully',
+    });
+  })
+  .catch((err) => {
+    toast({
+      title: 'Error',
+      description: err.message || 'An unexpected error occurred',
+      variant: 'destructive',
+    });
+  });
+
+};
+
+
+  // const handleDeleteVisitor = (id: string) => {
+  //   fetch(`http://localhost:8080/api/visitors/${id}`, {
+  //     method: 'DELETE',
+  //   }).then(() => {
+  //     setVisitors(visitors.filter((v) => v.id !== id));
+  //     toast({
+  //       title: 'Success',
+  //       description: 'Visitor record removed successfully',
+  //     });
+  //   });
+  // };
+
+  const checkInmateExists = async (inmateName: string) => {
+    const res = await fetch(`http://localhost:8080/api/inmates?name=${encodeURIComponent(inmateName)}`);
+      if (!res.ok) return false;
+      const data = await res.json();
+      return data.length > 0;
   };
 
   const handleStatusChange = (
@@ -366,13 +398,13 @@ const VisitorsPanel = () => {
                       <SelectItem value="Cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button
+                  {/* <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => handleDeleteVisitor(visitor.id)}
                   >
                     Delete
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
             </CardHeader>

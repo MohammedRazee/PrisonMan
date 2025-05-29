@@ -67,53 +67,55 @@ const DashboardHome = () => {
       <DashboardCharts />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-white border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-slate-800">Recent Activities</CardTitle>
-            <CardDescription>Latest system activities and updates</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <p className="font-medium text-slate-800">{activity.type}</p>
-                    <p className="text-sm text-slate-600">{activity.details}</p>
-                    <p className="text-xs text-slate-400 mt-1">{activity.time}</p>
+        <>
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-slate-800">Recent Activities</CardTitle>
+              <CardDescription>Latest system activities and updates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivities.map((activity, index) => (
+                  <div key={index} className="flex items-start space-x-3 p-3 bg-slate-50 rounded-lg">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div className="flex-1">
+                      <p className="font-medium text-slate-800">{activity.type}</p>
+                      <p className="text-sm text-slate-600">{activity.details}</p>
+                      <p className="text-xs text-slate-400 mt-1">{activity.time}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-white border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-slate-800">Quick Actions</CardTitle>
-            <CardDescription>Common administrative tasks</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <button className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition-colors">
-                <div className="text-2xl mb-2">➕</div>
-                <div className="text-sm font-medium text-slate-700">Add Inmate</div>
-              </button>
-              <button className="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-center transition-colors">
-                <div className="text-2xl mb-2">👷</div>
-                <div className="text-sm font-medium text-slate-700">Add Staff</div>
-              </button>
-              <button className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-center transition-colors">
-                <div className="text-2xl mb-2">📋</div>
-                <div className="text-sm font-medium text-slate-700">Generate Report</div>
-              </button>
-              <button className="p-4 bg-orange-50 hover:bg-orange-100 rounded-lg text-center transition-colors">
-                <div className="text-2xl mb-2">🔧</div>
-                <div className="text-sm font-medium text-slate-700">System Settings</div>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-slate-800">Quick Actions</CardTitle>
+              <CardDescription>Common administrative tasks</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <button className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition-colors">
+                  <div className="text-2xl mb-2">➕</div>
+                  <div className="text-sm font-medium text-slate-700">Add Inmate</div>
+                </button>
+                <button className="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-center transition-colors">
+                  <div className="text-2xl mb-2">👷</div>
+                  <div className="text-sm font-medium text-slate-700">Add Staff</div>
+                </button>
+                <button className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-center transition-colors">
+                  <div className="text-2xl mb-2">📋</div>
+                  <div className="text-sm font-medium text-slate-700">Generate Report</div>
+                </button>
+                <button className="p-4 bg-orange-50 hover:bg-orange-100 rounded-lg text-center transition-colors">
+                  <div className="text-2xl mb-2">🔧</div>
+                  <div className="text-sm font-medium text-slate-700">System Settings</div>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       </div>
     </div>
   );

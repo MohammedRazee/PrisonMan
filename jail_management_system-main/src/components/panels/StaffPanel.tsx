@@ -89,34 +89,43 @@ const StaffPanel = () => {
     return matchesSearch && matchesStatus && matchesShift;
   });
 
-  const handleAddStaff = () => {
-    if (
-      !newStaff.name ||
-      !newStaff.position ||
-      !newStaff.department ||
-      !newStaff.phone
-    ) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
-      });
-      return;
-    }
+const handleAddStaff = async () => {
+  if (
+    !newStaff.name ||
+    !newStaff.position ||
+    !newStaff.department ||
+    !newStaff.phone
+  ) {
+    toast({
+      title: 'Error',
+      description: 'Please fill in all required fields',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-    const staffMember: Staff = {
-      id: Date.now().toString(),
-      employeeId: `EMP${String(staff.length + 1).padStart(3, '0')}`,
-      name: newStaff.name,
-      position: newStaff.position,
-      department: newStaff.department,
-      shift: newStaff.shift,
-      phone: newStaff.phone,
-      status: newStaff.status,
-      hireDate: new Date().toISOString().split('T')[0],
-    };
+  const staffMember = {
+    name: newStaff.name,
+    position: newStaff.position,
+    department: newStaff.department,
+    shift: newStaff.shift,
+    phone: newStaff.phone,
+    status: newStaff.status,
+    hireDate: new Date().toISOString().split('T')[0],
+  };
 
-    setStaff([...staff, staffMember]);
+  try {
+    const res = await fetch('http://localhost:8080/api/staff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(staffMember),
+    });
+
+    const savedStaff = await res.json();
+    setStaff([...staff, savedStaff]);
+    toast({ title: 'Success', description: 'Staff member added successfully' });
+
+    // Reset form and close dialog
     setNewStaff({
       name: '',
       position: '',
@@ -126,20 +135,24 @@ const StaffPanel = () => {
       status: 'On Duty',
     });
     setIsAddDialogOpen(false);
+  } catch (error) {
+    toast({ title: 'Error', description: 'Failed to add staff', variant: 'destructive' });
+  }
+};
 
-    toast({
-      title: 'Success',
-      description: 'Staff member added successfully (local only)',
+
+const handleDeleteStaff = async (id: string) => {
+  try {
+    await fetch(`http://localhost:8080/api/staff/${id}`, {
+      method: 'DELETE',
     });
-  };
-
-  const handleDeleteStaff = (id: string) => {
     setStaff(staff.filter((member) => member.id !== id));
-    toast({
-      title: 'Success',
-      description: 'Staff member removed successfully (local only)',
-    });
-  };
+    toast({ title: 'Success', description: 'Staff member removed successfully' });
+  } catch (error) {
+    toast({ title: 'Error', description: 'Failed to delete staff', variant: 'destructive' });
+  }
+};
+
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,10 @@
 package com.Prisonman.Prisonman.Controller;
 
 import com.Prisonman.Prisonman.Model.Visitor;
+import com.Prisonman.Prisonman.Repository.InmateRepository;
 import com.Prisonman.Prisonman.Repository.VisitorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,6 +15,9 @@ import java.util.List;
 public class VisitorController {
 
     @Autowired
+    private InmateRepository inmateRepository;
+
+    @Autowired
     private VisitorRepository visitorRepository;
 
     @GetMapping
@@ -21,9 +26,18 @@ public class VisitorController {
     }
 
     @PostMapping
-    public Visitor createVisitor(@RequestBody Visitor visitor) {
-        return visitorRepository.save(visitor);
+    public ResponseEntity<?> createVisitor(@RequestBody Visitor visitor) {
+        boolean inmateExists = inmateRepository.findByInmateId(visitor.getVisitingInmate()).isPresent();
+
+        if (!inmateExists) {
+            return ResponseEntity.status(400).body("The specified inmate does not exist.");
+        }
+
+        Visitor savedVisitor = visitorRepository.save(visitor);
+        return ResponseEntity.ok(savedVisitor);
     }
+
+
 
     @DeleteMapping("/{id}")
     public void deleteVisitor(@PathVariable String id) {

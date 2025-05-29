@@ -13,11 +13,10 @@ public class Inmate {
     private int age;
     private String cellNumber;
     private String admissionDate;
-    private String status; // Active, Released, Transferred
+    private String status;
     private String charges;
     private String block;
 
-    // Getters and Setters
 
     public String getId() {
         return id;

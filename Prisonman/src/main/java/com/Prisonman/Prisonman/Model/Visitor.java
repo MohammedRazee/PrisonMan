@@ -34,7 +34,6 @@ public class Visitor {
         this.visitingInmate = visitingInmate;
     }
 
-    // Getters and setters
     public String get_id() {
         return _id;
     }

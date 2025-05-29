@@ -3,34 +3,34 @@
     "$oid": "6833f07440ec780a9a9ef2da"
   },
   "name": "Block A",
-  "capacity": 350,
+  "capacity": 444,
   "current": 312,
-  "utilization": 89
+  "utilization": 70
 },
 {
   "_id": {
     "$oid": "6833f07440ec780a9a9ef2db"
   },
   "name": "Block B",
-  "capacity": 300,
+  "capacity": 349,
   "current": 289,
-  "utilization": 96
+  "utilization": 83
 },
 {
   "_id": {
     "$oid": "6833f07440ec780a9a9ef2dc"
   },
   "name": "Medical",
-  "capacity": 50,
+  "capacity": 180,
   "current": 45,
-  "utilization": 90
+  "utilization": 25
 },
 {
   "_id": {
     "$oid": "6833f07440ec780a9a9ef2dd"
   },
   "name": "Solitary",
-  "capacity": 20,
+  "capacity": 60,
   "current": 12,
-  "utilization": 60
+  "utilization": 20
 }]

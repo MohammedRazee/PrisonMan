@@ -51,7 +51,6 @@ const CellsPanel = () => {
     status: 'Available' as 'Available' | 'Occupied' | 'Maintenance' | 'Closed',
   });
 
-  // ✅ Fetch data from backend
   useEffect(() => {
     fetch('http://localhost:8080/api/cells')
       .then((res) => res.json())
@@ -159,6 +158,16 @@ const CellsPanel = () => {
       );
   };
 
+  const getStatusOptions = (cell: Cell) => {
+  const derivedStatus =
+    cell.currentOccupancy >= cell.capacity ? 'Occupied' : 'Available';
+
+  return cell.status === 'Maintenance'
+    ? ['Maintenance', derivedStatus]
+    : ['Maintenance', cell.status];
+};
+
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -264,13 +273,13 @@ const CellsPanel = () => {
                   <CardTitle className="text-lg">{cell.cellNumber}</CardTitle>
                   <CardDescription>Block {cell.block} • {cell.type}</CardDescription>
                 </div>
-                <Button
+                {/* <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => handleDeleteCell(cell.id)}
                 >
                   Delete
-                </Button>
+                </Button> */}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -281,11 +290,12 @@ const CellsPanel = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Available">Available</SelectItem>
-                    <SelectItem value="Occupied">Occupied</SelectItem>
-                    <SelectItem value="Maintenance">Maintenance</SelectItem>
-                    <SelectItem value="Closed">Closed</SelectItem>
-                  </SelectContent>
+                  {getStatusOptions(cell).map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
                 </Select>
               </div>
               
