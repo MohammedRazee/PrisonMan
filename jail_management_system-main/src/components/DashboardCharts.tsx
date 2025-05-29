@@ -88,7 +88,6 @@ const DashboardCharts = () => {
     fetch("http://localhost:8080/api/weekly-activity")
       .then((res) => res.json())
       .then((data) => {
-        // Sort days to follow Mon–Sun
         const dayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
         data.sort(
           (a, b) =>

@@ -1,11 +1,30 @@
-
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 
 interface Visitor {
@@ -21,32 +40,9 @@ interface Visitor {
 }
 
 const VisitorsPanel = () => {
-  const [visitors, setVisitors] = useState<Visitor[]>([
-    {
-      id: '1',
-      name: 'Mary Johnson',
-      relationship: 'Mother',
-      inmateVisiting: 'John Doe (INM001)',
-      visitDate: '2024-05-23',
-      visitTime: '14:00',
-      status: 'Scheduled',
-      phone: '(555) 111-2222',
-      idNumber: 'DL123456789',
-    },
-    {
-      id: '2',
-      name: 'Robert Smith',
-      relationship: 'Brother',
-      inmateVisiting: 'Jane Smith (INM002)',
-      visitDate: '2024-05-22',
-      visitTime: '10:30',
-      status: 'Completed',
-      phone: '(555) 333-4444',
-      idNumber: 'ID987654321',
-    },
-  ]);
-
+  const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Scheduled' | 'Completed' | 'Cancelled'>('All');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newVisitor, setNewVisitor] = useState({
     name: '',
@@ -59,26 +55,61 @@ const VisitorsPanel = () => {
     status: 'Scheduled' as const,
   });
 
+  useEffect(() => {
+    fetch("http://localhost:8080/api/visitors")
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.map((v: any) => ({
+          id: v._id,
+          name: v.name,
+          relationship: v.relationship,
+          inmateVisiting: v.visitingInmate,
+          visitDate: v.visitDate,
+          visitTime: v.visitTime,
+          status: v.status,
+          phone: v.phone,
+          idNumber: v.idNumber,
+        }));
+        setVisitors(formatted);
+      })
+      .catch(() => {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch visitors.',
+          variant: 'destructive',
+        });
+      });
+  }, []);
+
   const filteredVisitors = visitors.filter(visitor =>
-    visitor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    visitor.inmateVisiting.toLowerCase().includes(searchTerm.toLowerCase())
+    (searchTerm === '' ||
+      visitor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      visitor.inmateVisiting.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (statusFilter === 'All' || visitor.status === statusFilter)
   );
 
   const handleAddVisitor = () => {
-    if (!newVisitor.name || !newVisitor.relationship || !newVisitor.inmateVisiting || !newVisitor.visitDate || !newVisitor.visitTime || !newVisitor.phone || !newVisitor.idNumber) {
+    if (
+      !newVisitor.name ||
+      !newVisitor.relationship ||
+      !newVisitor.inmateVisiting ||
+      !newVisitor.visitDate ||
+      !newVisitor.visitTime ||
+      !newVisitor.phone ||
+      !newVisitor.idNumber
+    ) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
       });
       return;
     }
 
-    const visitor: Visitor = {
-      id: Date.now().toString(),
+    const visitorPayload = {
       name: newVisitor.name,
       relationship: newVisitor.relationship,
-      inmateVisiting: newVisitor.inmateVisiting,
+      visitingInmate: newVisitor.inmateVisiting,
       visitDate: newVisitor.visitDate,
       visitTime: newVisitor.visitTime,
       phone: newVisitor.phone,
@@ -86,32 +117,87 @@ const VisitorsPanel = () => {
       status: newVisitor.status,
     };
 
-    setVisitors([...visitors, visitor]);
-    setNewVisitor({ name: '', relationship: '', inmateVisiting: '', visitDate: '', visitTime: '', phone: '', idNumber: '', status: 'Scheduled' });
-    setIsAddDialogOpen(false);
-    
-    toast({
-      title: "Success",
-      description: "Visitor scheduled successfully",
-    });
+    fetch("http://localhost:8080/api/visitors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(visitorPayload),
+    })
+      .then((res) => res.json())
+      .then((created) => {
+        setVisitors([
+          ...visitors,
+          {
+            id: created._id,
+            name: created.name,
+            relationship: created.relationship,
+            inmateVisiting: created.visitingInmate,
+            visitDate: created.visitDate,
+            visitTime: created.visitTime,
+            status: created.status,
+            phone: created.phone,
+            idNumber: created.idNumber,
+          },
+        ]);
+        setNewVisitor({
+          name: '',
+          relationship: '',
+          inmateVisiting: '',
+          visitDate: '',
+          visitTime: '',
+          phone: '',
+          idNumber: '',
+          status: 'Scheduled',
+        });
+        setIsAddDialogOpen(false);
+        toast({
+          title: 'Success',
+          description: 'Visitor scheduled successfully',
+        });
+      });
   };
 
   const handleDeleteVisitor = (id: string) => {
-    setVisitors(visitors.filter(visitor => visitor.id !== id));
-    toast({
-      title: "Success",
-      description: "Visitor record removed successfully",
+    fetch(`http://localhost:8080/api/visitors/${id}`, {
+      method: 'DELETE',
+    }).then(() => {
+      setVisitors(visitors.filter((v) => v.id !== id));
+      toast({
+        title: 'Success',
+        description: 'Visitor record removed successfully',
+      });
     });
   };
 
-  const handleStatusChange = (id: string, newStatus: 'Scheduled' | 'Completed' | 'Cancelled') => {
-    setVisitors(visitors.map(visitor => 
-      visitor.id === id ? { ...visitor, status: newStatus } : visitor
-    ));
-    toast({
-      title: "Success",
-      description: `Visit status updated to ${newStatus}`,
-    });
+  const handleStatusChange = (
+    id: string,
+    newStatus: 'Scheduled' | 'Completed' | 'Cancelled'
+  ) => {
+    const updatedVisitor = visitors.find((v) => v.id === id);
+    if (!updatedVisitor) return;
+
+    const updated = {
+      ...updatedVisitor,
+      status: newStatus,
+      visitingInmate: updatedVisitor.inmateVisiting,
+    };
+
+    fetch(`http://localhost:8080/api/visitors/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updated),
+    })
+      .then((res) => res.json())
+      .then(() => {
+        setVisitors(
+          visitors.map((v) => (v.id === id ? { ...v, status: newStatus } : v))
+        );
+        toast({
+          title: 'Success',
+          description: `Visit status updated to ${newStatus}`,
+        });
+      });
   };
 
   return (
@@ -121,7 +207,7 @@ const VisitorsPanel = () => {
           <h2 className="text-3xl font-bold text-slate-800">Visitors Management</h2>
           <p className="text-slate-600">Schedule and manage inmate visits</p>
         </div>
-        
+
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-purple-600 hover:bg-purple-700">
@@ -142,7 +228,9 @@ const VisitorsPanel = () => {
                   <Input
                     id="name"
                     value={newVisitor.name}
-                    onChange={(e) => setNewVisitor({ ...newVisitor, name: e.target.value })}
+                    onChange={(e) =>
+                      setNewVisitor({ ...newVisitor, name: e.target.value })
+                    }
                     placeholder="Enter full name"
                   />
                 </div>
@@ -151,7 +239,9 @@ const VisitorsPanel = () => {
                   <Input
                     id="relationship"
                     value={newVisitor.relationship}
-                    onChange={(e) => setNewVisitor({ ...newVisitor, relationship: e.target.value })}
+                    onChange={(e) =>
+                      setNewVisitor({ ...newVisitor, relationship: e.target.value })
+                    }
                     placeholder="e.g., Mother, Friend"
                   />
                 </div>
@@ -161,7 +251,9 @@ const VisitorsPanel = () => {
                 <Input
                   id="inmateVisiting"
                   value={newVisitor.inmateVisiting}
-                  onChange={(e) => setNewVisitor({ ...newVisitor, inmateVisiting: e.target.value })}
+                  onChange={(e) =>
+                    setNewVisitor({ ...newVisitor, inmateVisiting: e.target.value })
+                  }
                   placeholder="e.g., John Doe (INM001)"
                 />
               </div>
@@ -172,7 +264,9 @@ const VisitorsPanel = () => {
                     id="visitDate"
                     type="date"
                     value={newVisitor.visitDate}
-                    onChange={(e) => setNewVisitor({ ...newVisitor, visitDate: e.target.value })}
+                    onChange={(e) =>
+                      setNewVisitor({ ...newVisitor, visitDate: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -181,7 +275,9 @@ const VisitorsPanel = () => {
                     id="visitTime"
                     type="time"
                     value={newVisitor.visitTime}
-                    onChange={(e) => setNewVisitor({ ...newVisitor, visitTime: e.target.value })}
+                    onChange={(e) =>
+                      setNewVisitor({ ...newVisitor, visitTime: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -191,8 +287,10 @@ const VisitorsPanel = () => {
                   <Input
                     id="phone"
                     value={newVisitor.phone}
-                    onChange={(e) => setNewVisitor({ ...newVisitor, phone: e.target.value })}
-                    placeholder="(555) 123-4567"
+                    onChange={(e) =>
+                      setNewVisitor({ ...newVisitor, phone: e.target.value })
+                    }
+                    placeholder="(+91) 123-4567"
                   />
                 </div>
                 <div className="space-y-2">
@@ -200,27 +298,42 @@ const VisitorsPanel = () => {
                   <Input
                     id="idNumber"
                     value={newVisitor.idNumber}
-                    onChange={(e) => setNewVisitor({ ...newVisitor, idNumber: e.target.value })}
+                    onChange={(e) =>
+                      setNewVisitor({ ...newVisitor, idNumber: e.target.value })
+                    }
                     placeholder="Driver's License or ID"
                   />
                 </div>
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" onClick={handleAddVisitor}>Schedule Visit</Button>
+              <Button type="submit" onClick={handleAddVisitor}>
+                Schedule Visit
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-4 flex-wrap">
         <Input
           placeholder="Search visitors..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
-        <span className="text-slate-600">Total: {visitors.length} visits</span>
+        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filter by Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All</SelectItem>
+            <SelectItem value="Scheduled">Scheduled</SelectItem>
+            <SelectItem value="Completed">Completed</SelectItem>
+            <SelectItem value="Cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-slate-600">Total: {filteredVisitors.length} visits</span>
       </div>
 
       <div className="grid gap-4">
@@ -230,10 +343,20 @@ const VisitorsPanel = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg">{visitor.name}</CardTitle>
-                  <CardDescription>Visiting: {visitor.inmateVisiting}</CardDescription>
+                  <CardDescription>
+                    Visiting: {visitor.inmateVisiting}
+                  </CardDescription>
                 </div>
                 <div className="flex space-x-2">
-                  <Select value={visitor.status} onValueChange={(value: 'Scheduled' | 'Completed' | 'Cancelled') => handleStatusChange(visitor.id, value)}>
+                  <Select
+                    value={visitor.status}
+                    onValueChange={(value) =>
+                      handleStatusChange(
+                        visitor.id,
+                        value as 'Scheduled' | 'Completed' | 'Cancelled'
+                      )
+                    }
+                  >
                     <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
@@ -261,7 +384,9 @@ const VisitorsPanel = () => {
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Date & Time:</span>
-                  <p>{visitor.visitDate} at {visitor.visitTime}</p>
+                  <p>
+                    {visitor.visitDate} at {visitor.visitTime}
+                  </p>
                 </div>
                 <div>
                   <span className="font-medium text-slate-600">Phone:</span>
@@ -279,7 +404,9 @@ const VisitorsPanel = () => {
 
       {filteredVisitors.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-slate-500">No visits found matching your search.</p>
+          <p className="text-slate-500">
+            No visits found matching your search or filter.
+          </p>
         </div>
       )}
     </div>

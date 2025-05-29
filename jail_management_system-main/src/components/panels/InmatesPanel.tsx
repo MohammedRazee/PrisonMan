@@ -42,6 +42,7 @@ interface Inmate {
 const InmatesPanel = () => {
   const [inmates, setInmates] = useState<Inmate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Released' | 'Transferred'>('All');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newInmate, setNewInmate] = useState({
     name: '',
@@ -68,11 +69,15 @@ const InmatesPanel = () => {
       });
   }, []);
 
-  const filteredInmates = inmates.filter(
-    (inmate) =>
+  const filteredInmates = inmates.filter((inmate) => {
+    const matchesSearch =
       inmate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inmate.inmateId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      inmate.inmateId.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'All' || inmate.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const handleAddInmate = () => {
     if (!newInmate.name || !newInmate.age || !newInmate.cellNumber || !newInmate.charges) {
@@ -200,13 +205,32 @@ const InmatesPanel = () => {
         </Dialog>
       </div>
 
-      <div className="flex justify-between items-center">
+      {/* Search and Status Filter */}
+      <div className="flex justify-between items-center space-x-4">
         <Input
           placeholder="Search inmates..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
+
+        <Select
+          value={statusFilter}
+          onValueChange={(value: 'All' | 'Active' | 'Released' | 'Transferred') =>
+            setStatusFilter(value)
+          }
+        >
+          <SelectTrigger className="max-w-xs">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All</SelectItem>
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Released">Released</SelectItem>
+            <SelectItem value="Transferred">Transferred</SelectItem>
+          </SelectContent>
+        </Select>
+
         <span className="text-slate-600">Total: {inmates.length} inmates</span>
       </div>
 

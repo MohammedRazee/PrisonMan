@@ -1,10 +1,30 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 
 interface Cell {
@@ -14,45 +34,14 @@ interface Cell {
   capacity: number;
   currentOccupancy: number;
   status: 'Available' | 'Occupied' | 'Maintenance' | 'Closed';
-  type: 'Standard' | 'Solitary' | 'Medical' | 'Protective';
+  type?: 'Standard' | 'Solitary' | 'Medical' | 'Protective';
   inmates: string[];
 }
 
 const CellsPanel = () => {
-  const [cells, setCells] = useState<Cell[]>([
-    {
-      id: '1',
-      cellNumber: 'A-101',
-      block: 'A',
-      capacity: 2,
-      currentOccupancy: 1,
-      status: 'Occupied',
-      type: 'Standard',
-      inmates: ['John Doe (INM001)'],
-    },
-    {
-      id: '2',
-      cellNumber: 'B-205',
-      block: 'B',
-      capacity: 2,
-      currentOccupancy: 1,
-      status: 'Occupied',
-      type: 'Standard',
-      inmates: ['Jane Smith (INM002)'],
-    },
-    {
-      id: '3',
-      cellNumber: 'C-301',
-      block: 'C',
-      capacity: 1,
-      currentOccupancy: 0,
-      status: 'Available',
-      type: 'Solitary',
-      inmates: [],
-    },
-  ]);
-
+  const [cells, setCells] = useState<Cell[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newCell, setNewCell] = useState({
     cellNumber: '',
@@ -62,68 +51,112 @@ const CellsPanel = () => {
     status: 'Available' as 'Available' | 'Occupied' | 'Maintenance' | 'Closed',
   });
 
-  const filteredCells = cells.filter(cell =>
-    cell.cellNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cell.block.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ Fetch data from backend
+  useEffect(() => {
+    fetch('http://localhost:8080/api/cells')
+      .then((res) => res.json())
+      .then((data) => setCells(data))
+      .catch(() =>
+        toast({
+          title: 'Error',
+          description: 'Failed to load cells data',
+          variant: 'destructive',
+        })
+      );
+  }, []);
+
+  const filteredCells = cells.filter((cell) => {
+    const matchesSearch =
+      cell.cellNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cell.block.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || cell.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleAddCell = () => {
     if (!newCell.cellNumber || !newCell.block || !newCell.capacity) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
       });
       return;
     }
 
-    const cell: Cell = {
-      id: Date.now().toString(),
+    const cellToPost = {
       cellNumber: newCell.cellNumber,
       block: newCell.block,
       capacity: parseInt(newCell.capacity),
       currentOccupancy: 0,
       status: newCell.status,
-      type: newCell.type,
       inmates: [],
     };
 
-    setCells([...cells, cell]);
-    setNewCell({ cellNumber: '', block: '', capacity: '', type: 'Standard', status: 'Available' });
-    setIsAddDialogOpen(false);
-    
-    toast({
-      title: "Success",
-      description: "Cell added successfully",
-    });
+    fetch('http://localhost:8080/api/cells', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cellToPost),
+    })
+      .then((res) => res.json())
+      .then((newCell) => {
+        setCells([...cells, newCell]);
+        setNewCell({ cellNumber: '', block: '', capacity: '', type: 'Standard', status: 'Available' });
+        setIsAddDialogOpen(false);
+        toast({
+          title: 'Success',
+          description: 'Cell added successfully',
+        });
+      })
+      .catch(() =>
+        toast({
+          title: 'Error',
+          description: 'Failed to add cell',
+          variant: 'destructive',
+        })
+      );
   };
 
   const handleDeleteCell = (id: string) => {
-    setCells(cells.filter(cell => cell.id !== id));
-    toast({
-      title: "Success",
-      description: "Cell removed successfully",
-    });
+    fetch(`http://localhost:8080/api/cells/${id}`, {
+      method: 'DELETE',
+    })
+      .then(() => {
+        setCells(cells.filter((cell) => cell.id !== id));
+        toast({ title: 'Success', description: 'Cell removed successfully' });
+      })
+      .catch(() =>
+        toast({
+          title: 'Error',
+          description: 'Failed to delete cell',
+          variant: 'destructive',
+        })
+      );
   };
 
-  const handleStatusChange = (id: string, newStatus: 'Available' | 'Occupied' | 'Maintenance' | 'Closed') => {
-    setCells(cells.map(cell => 
-      cell.id === id ? { ...cell, status: newStatus } : cell
-    ));
-    toast({
-      title: "Success",
-      description: `Cell status updated to ${newStatus}`,
-    });
-  };
+  const handleStatusChange = (id: string, newStatus: Cell['status']) => {
+    const target = cells.find((c) => c.id === id);
+    if (!target) return;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Available': return 'bg-green-100 text-green-800';
-      case 'Occupied': return 'bg-blue-100 text-blue-800';
-      case 'Maintenance': return 'bg-yellow-100 text-yellow-800';
-      case 'Closed': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    fetch(`http://localhost:8080/api/cells/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...target, status: newStatus }),
+    })
+      .then((res) => res.json())
+      .then((updated) => {
+        setCells(cells.map((c) => (c.id === id ? updated : c)));
+        toast({
+          title: 'Success',
+          description: `Cell status updated to ${newStatus}`,
+        });
+      })
+      .catch(() =>
+        toast({
+          title: 'Error',
+          description: 'Failed to update status',
+          variant: 'destructive',
+        })
+      );
   };
 
   return (
@@ -198,14 +231,28 @@ const CellsPanel = () => {
         </Dialog>
       </div>
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <Input
           placeholder="Search cells..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
-        <span className="text-slate-600">Total: {cells.length} cells</span>
+        <div className="flex gap-4 items-center">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All</SelectItem>
+              <SelectItem value="Available">Available</SelectItem>
+              <SelectItem value="Occupied">Occupied</SelectItem>
+              <SelectItem value="Maintenance">Maintenance</SelectItem>
+              <SelectItem value="Closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-slate-600">Total: {cells.length} cells</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
