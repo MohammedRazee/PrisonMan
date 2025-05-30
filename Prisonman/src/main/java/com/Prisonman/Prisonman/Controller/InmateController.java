@@ -2,6 +2,7 @@ package com.Prisonman.Prisonman.Controller;
 
 import com.Prisonman.Prisonman.Model.Cell;
 import com.Prisonman.Prisonman.Model.Inmate;
+import com.Prisonman.Prisonman.Repository.CellBlockRepository;
 import com.Prisonman.Prisonman.Repository.CellRepository;
 import com.Prisonman.Prisonman.Repository.InmateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ public class InmateController {
     @Autowired
     private CellRepository cellRepository;
 
+    @Autowired
+    private CellBlockRepository cellBlockRepository;
+
     @GetMapping
     public List<Inmate> getAllInmates() {
         return inmateRepository.findAll();
@@ -29,44 +33,42 @@ public class InmateController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Inmate> getInmateById(@PathVariable String id) {
-        Optional<Inmate> inmate = inmateRepository.findById(id);
+        Optional<Inmate> inmate = inmateRepository.findByInmateId(id);
         return inmate.map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public ResponseEntity<?> addInmate(@RequestBody Inmate inmate) {
-        Optional<Cell> availableCellOp = cellRepository.findAll().stream()
-                .filter(cell -> cell.getCurrentOccupancy() < cell.getCapacity())
+        Optional<Cell> cellOpt = cellRepository.findAll().stream()
+                .filter(cell -> cell.getCellNumber().equals(inmate.getCellNumber()) &&
+                        cell.getBlock().equals(inmate.getBlock()))
                 .findFirst();
 
-        if (availableCellOp.isEmpty()) {
-            return ResponseEntity.status(409).body("No available cells to assign inmate");
+        if (cellOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Specified cell not found.");
         }
 
-        Cell cell = availableCellOp.get();
+        Cell cell = cellOpt.get();
 
-        inmate.setCellNumber(cell.getCellNumber());
-        inmate.setBlock(cell.getBlock());
+        if (cell.getCurrentOccupancy() >= cell.getCapacity()) {
+            return ResponseEntity.status(409).body("Cell is already full.");
+        }
 
         Inmate savedInmate = inmateRepository.save(inmate);
 
         List<String> inmatesList = cell.getInmates();
         inmatesList.add(savedInmate.getInmateId());
-
         cell.setInmates(inmatesList);
         cell.setCurrentOccupancy(cell.getCurrentOccupancy() + 1);
-
-        if (cell.getCurrentOccupancy() >= cell.getCapacity()) {
-            cell.setStatus("Occupied");
-        } else {
-            cell.setStatus("Available");
-        }
-
+        cell.setStatus(cell.getCurrentOccupancy() >= cell.getCapacity() ? "Occupied" : "Available");
         cellRepository.save(cell);
+
+        updateCellBlockStats(cell.getBlock());
 
         return ResponseEntity.ok(savedInmate);
     }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Inmate> updateInmate(@PathVariable String id, @RequestBody Inmate updatedInmate) {
@@ -83,10 +85,9 @@ public class InmateController {
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // DELETE inmate by ID with cell update
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteInmate(@PathVariable String id) {
-        Optional<Inmate> inmateOpt = inmateRepository.findById(id);
+        Optional<Inmate> inmateOpt = inmateRepository.findByInmateId(id);
         if (inmateOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -102,6 +103,7 @@ public class InmateController {
             Cell cell = getCell(cellOpt, inmate);
 
             cellRepository.save(cell);
+            updateCellBlockStats(cell.getBlock());
         }
 
         inmateRepository.deleteById(id);
@@ -122,4 +124,25 @@ public class InmateController {
         }
         return cell;
     }
+
+    private void updateCellBlockStats(String blockName) {
+        List<Cell> cellsInBlock = cellRepository.findAll().stream()
+                .filter(cell -> cell.getBlock().equals(blockName))
+                .toList();
+
+        int totalCapacity = cellsInBlock.stream().mapToInt(Cell::getCapacity).sum();
+        int totalCurrent = cellsInBlock.stream().mapToInt(Cell::getCurrentOccupancy).sum();
+        int utilization = (int) ((totalCurrent / (double) totalCapacity) * 100);
+
+        cellBlockRepository.findAll().stream()
+                .filter(block -> block.getName().equals(blockName))
+                .findFirst()
+                .ifPresent(block -> {
+                    block.setCapacity(totalCapacity);
+                    block.setCurrent(totalCurrent);
+                    block.setUtilization(utilization);
+                    cellBlockRepository.save(block);
+                });
+    }
+
 }

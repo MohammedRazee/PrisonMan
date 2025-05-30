@@ -28,7 +28,6 @@ import {
 import { toast } from '@/hooks/use-toast';
 
 interface Inmate {
-  id: string;
   name: string;
   inmateId: string;
   age: number;
@@ -117,7 +116,7 @@ const InmatesPanel = () => {
     return matchesSearch && matchesStatus && matchesBlock;
   });
 
-  const handleAddInmate = () => {
+  const handleAddInmate = async () => {
     if (!newInmate.name || !newInmate.age || !newInmate.cellNumber || !newInmate.charges || !newInmate.block) {
       toast({
         title: 'Error',
@@ -127,35 +126,77 @@ const InmatesPanel = () => {
       return;
     }
 
-    const inmate: Inmate = {
-      id: Date.now().toString(),
-      inmateId: `INM${String(inmates.length + 1).padStart(3, '0')}`,
-      name: newInmate.name,
-      age: parseInt(newInmate.age),
-      cellNumber: newInmate.cellNumber,
-      charges: newInmate.charges,
-      status: newInmate.status,
-      admissionDate: new Date().toISOString().split('T')[0],
-      block: newInmate.block,
-    };
+    try {
+      const ids = inmates.map(i => parseInt(i.inmateId.replace('INM', ''), 10));
+      const maxId = ids.length > 0 ? Math.max(...ids) : 0;
+      const newInmateId = `INM${String(maxId + 1).padStart(3, '0')}`;
 
-    setInmates([...inmates, inmate]);
-    setNewInmate({ name: '', age: '', cellNumber: '', charges: '', status: 'Active', block: '' });
-    setIsAddDialogOpen(false);
+      const inmate: Inmate = {
+        inmateId: newInmateId,
+        name: newInmate.name,
+        age: parseInt(newInmate.age),
+        cellNumber: newInmate.cellNumber,
+        charges: newInmate.charges,
+        status: newInmate.status,
+        admissionDate: new Date().toISOString().split('T')[0],
+        block: newInmate.block,
+      };
 
-    toast({
-      title: 'Success',
-      description: 'Inmate added successfully (locally)',
-    });
+      const res = await fetch('http://localhost:8080/api/inmates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inmate),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Failed to add inmate');
+      }
+
+      const savedInmate = await res.json();
+      setInmates([...inmates, savedInmate]);
+      setNewInmate({ name: '', age: '', cellNumber: '', charges: '', status: 'Active', block: '' });
+      setIsAddDialogOpen(false);
+
+      toast({
+        title: 'Success',
+        description: 'Inmate added successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Server Error',
+        description: error.message || 'An error occurred while adding the inmate.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleDeleteInmate = (id: string) => {
-    setInmates(inmates.filter((inmate) => inmate.id !== id));
-    toast({
-      title: 'Success',
-      description: 'Inmate removed successfully (locally)',
-    });
+
+  const handleDeleteInmate = async (inmateId: string) => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/inmates/${inmateId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete inmate');
+      }
+
+      setInmates(inmates.filter((inmate) => inmate.inmateId !== inmateId));
+
+      toast({
+        title: 'Success',
+        description: 'Inmate deleted successfully',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.message || 'An error occurred while deleting the inmate.',
+        variant: 'destructive',
+      });
+    }
   };
+
 
   return (
     <div className="space-y-6">
@@ -318,7 +359,7 @@ const InmatesPanel = () => {
 
       <div className="grid gap-4">
         {filteredInmates.map((inmate) => (
-          <Card key={inmate.id} className="bg-white border-slate-200">
+          <Card key={inmate.inmateId} className="bg-white border-slate-200">
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -342,7 +383,7 @@ const InmatesPanel = () => {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => handleDeleteInmate(inmate.id)}
+                    onClick={() => handleDeleteInmate(inmate.inmateId)}
                   >
                     Delete
                   </Button>
