@@ -9,24 +9,14 @@ import java.util.List;
 public class Cell {
 
     @Id
-    private String _id; // MongoDB ObjectId
-
     private String id;
+
     private String cellNumber;
     private String block;
     private int capacity;
     private int currentOccupancy;
     private String status;
     private List<String> inmates;
-
-    // Getters and Setters
-    public String get_id() {
-        return _id;
-    }
-
-    public void set_id(String _id) {
-        this._id = _id;
-    }
 
     public String getId() {
         return id;
